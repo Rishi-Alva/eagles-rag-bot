@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Eagles Widget Demo</title>
+  </head>
+  <body>
+    <main style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 24px; max-width: 860px;">
+      <h2 style="margin: 0 0 8px;">Eagles chat widget — try it live</h2>
+      <p style="margin: 0 0 12px; color: #374151;">
+        With <code>npm run dev</code> running, this page calls your <strong>local API</strong> at the <strong>same host as this script</strong> (so
+        <code>http://localhost:3000</code> and <code>http://127.0.0.1:3000</code> both work). You need <code>.env</code> with
+        <code>ANTHROPIC_API_KEY</code>, a valid <code>ANTHROPIC_MODEL</code>, and run <code>npm run reindex</code> once so
+        <code>data/eagles-index.json</code> exists. If the API errors, the chat will show the error and then demo text.
+      </p>
+      <p style="margin: 0 0 16px; padding: 12px; background: #e8f4f6; border-radius: 8px; color: #00213d; font-size: 14px;">
+        <strong>Try it:</strong> click <strong>Chat</strong> (bottom-right) → type a question → <strong>Send</strong>.
+        If the API is unavailable, the widget falls back to demo replies.
+      </p>
+
+      <p style="margin: 0 0 16px; color: #111827;">
+        Example: <em>"What is the Challenge program?"</em> or <em>"Where are you located?"</em>
+      </p>
+
+      <p style="margin: 0; color: #6b7280; font-size: 13px;">
+        Brand: Orlando Eagles navy (<code>#00213D</code>), cyan (<code>#63C9D6</code>), white. Logo appears next to the title. Override with
+        <code>data-primary</code>, <code>data-accent</code>, <code>data-logo</code> (or <code>data-logo="none"</code> to hide).
+      </p>
+    </main>
+
+    <!-- Omit data-api-base: widget uses the script URL’s origin as API base (same as npm run dev host). -->
+    <script
+      src="/eagles-widget.js"
+      data-title="Eagles Assistant"
+      data-position="right"
+      data-demo="auto"
+      data-logo="/orlando-eagles-logo.png"
+      data-primary="auto"
+      data-surface="auto"
+      data-text="auto"
+      data-muted="auto"
+      defer
+    ></script>
+  </body>
+</html>
+

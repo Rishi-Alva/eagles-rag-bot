@@ -1,0 +1,40 @@
+{
+  "name": "eagles-rag-bot",
+  "version": "1.0.0",
+  "description": "RAG chat bot for Orlando Eagles Squarespace site (Claude Sonnet + citations)",
+  "private": true,
+  "scripts": {
+    "dev": "tsx src/devServer.ts",
+    "dev:watch": "tsx watch src/devServer.ts",
+    "reindex": "tsx src/reindex.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check-env": "tsx src/check-env.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "@mozilla/readability": "^0.6.0",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.4.2",
+    "jsdom": "^29.0.2",
+    "minisearch": "^7.2.0",
+    "p-limit": "^7.3.0",
+    "pdf-parse": "^2.4.5",
+    "undici": "^8.1.0",
+    "xml2js": "^0.6.2",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^28.0.1",
+    "@types/node": "^25.6.0",
+    "@types/xml2js": "^0.4.14",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,0 +1,11 @@
+node_modules/
+.vercel/
+.env
+.env.local
+.env.save
+*.save
+.DS_Store
+dist/
+.cache/
+# Local rate-limit store (optional override via EAGLES_RATE_LIMIT_FILE)
+data/rate-limits.json
