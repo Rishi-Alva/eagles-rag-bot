@@ -4,9 +4,22 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
-// Load `.env` from the project root (folder that contains `package.json`), not from `process.cwd()`.
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ENV_FILE = resolve(__dirname, "..", ".env");
+
+/** Folder with `package.json` — works for `src/*.ts` and for a bundle emitted next to `package.json` (e.g. `.dev-server.mjs`). */
+function findPackageRoot(startDir: string): string {
+  let dir = startDir;
+  for (let i = 0; i < 14; i++) {
+    if (existsSync(resolve(dir, "package.json"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return resolve(startDir, "..");
+}
+
+// Load `.env` next to `package.json`, not from `resolve(__dirname,"..")` (breaks when the bundle’s `__dirname` is already the package root).
+const ENV_FILE = resolve(findPackageRoot(__dirname), ".env");
 const ENV_FILE_CWD = resolve(process.cwd(), ".env");
 
 function mergeParsedEnvFile(path: string) {

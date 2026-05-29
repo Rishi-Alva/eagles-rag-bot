@@ -12,6 +12,8 @@ const BodySchema = z.object({
   message: z.string().min(1),
   /** Opaque id from the widget (e.g. random UUID). Short or missing values fall back to IP-based limiting. */
   clientId: z.string().max(200).optional(),
+  /** Browser locale from URL (`-es`, `/es/`, etc.). Passed through by `eagles-widget.js`. */
+  locale: z.string().max(12).optional(),
 });
 
 type LoadedIndex = Awaited<ReturnType<typeof loadIndex>>;
@@ -28,6 +30,19 @@ function pickIndexPath(configured: string) {
   const tmp = "/tmp/eagles-index.json";
   if (existsSync(tmp)) return tmp;
   return configured;
+}
+
+/** Include Error.cause chain so SDK "Connection error." surfaces DNS/TLS/proxy details. */
+function formatServerError(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  const parts: string[] = [err.message];
+  let c: unknown = err.cause;
+  for (let depth = 0; depth < 5 && c instanceof Error; depth++) {
+    parts.push(c.message);
+    c = c.cause;
+  }
+  const s = parts.filter(Boolean).join(" - ");
+  return s.length > 800 ? `${s.slice(0, 797)}…` : s;
 }
 
 export default async function handler(req: any, res: any) {
@@ -58,7 +73,11 @@ export default async function handler(req: any, res: any) {
     const hits = searchIndex({ index: idx, query: q, topK: 4 });
     const sources = hits.filter((h) => h.sourceUrl && h.score > 0.2);
 
-    const { answer } = await generateAnswer({ userMessage: q, sources });
+    const rawLoc = typeof body.locale === "string" ? body.locale.trim().toLowerCase().slice(0, 12) : "";
+    const locale =
+      rawLoc && /^[a-z]{2}([-][a-z0-9]{2,8})?$/i.test(rawLoc) ? rawLoc.split("-")[0].slice(0, 5) : undefined;
+
+    const { answer } = await generateAnswer({ userMessage: q, sources, locale });
 
     const rateLimit = await recordChatUse(clientId, req);
 
@@ -80,7 +99,7 @@ export default async function handler(req: any, res: any) {
       const msg = err.issues[0]?.message || "Invalid request body";
       return jsonResponse(req, res, 400, { error: msg });
     }
-    const msg = err instanceof Error ? err.message : "Unknown error";
+    const msg = formatServerError(err);
     return jsonResponse(req, res, 500, { error: msg });
   }
 }
