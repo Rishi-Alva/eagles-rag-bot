@@ -1,0 +1,25 @@
+# Local Postgres for analytics (self-hosted / dev)
+# Start: npm run db:up
+# Migrate: npm run db:migrate
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: eagles-rag-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: eagles
+      POSTGRES_PASSWORD: eagles
+      POSTGRES_DB: eagles_analytics
+    ports:
+      - "5432:5432"
+    volumes:
+      - eagles_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eagles -d eagles_analytics"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  eagles_pg_data:

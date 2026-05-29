@@ -1,0 +1,114 @@
+<!--
+  Orlando Eagles language switcher + Postgres analytics
+  Squarespace: Settings → Advanced → Code Injection → Header
+
+  Set EAGLES_API_BASE to your self-hosted API (same host as eagles-widget.js data-api-base).
+-->
+<style>
+#lang-switcher {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+#lang-switcher select {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #ffffff;
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  padding: 6px 28px 6px 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23ffffff' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+  outline: none;
+}
+#lang-switcher select option {
+  background-color: #0d2545;
+  color: #ffffff;
+}
+@media (max-width: 768px) {
+  #lang-switcher { top: 16px; right: 16px; }
+}
+</style>
+<script>
+(function () {
+  var EAGLES_API_BASE = 'https://YOUR-API-SERVER.com';
+
+  var languages = {
+    '':    { label: 'English', code: 'en' },
+    '-es': { label: 'Español', code: 'es' }
+  };
+
+  function trackLanguageSwitch(langCode, suffix) {
+    var base = (EAGLES_API_BASE || '').replace(/\/+$/, '');
+    if (!base) return;
+    fetch(base + '/api/event', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'language_switch',
+        locale: langCode,
+        pagePath: window.location.pathname,
+        metadata: { suffix: suffix || '' }
+      }),
+      keepalive: true
+    }).catch(function () {});
+  }
+
+  function getCurrentSuffix(pathname) {
+    var clean = pathname.replace(/\/$/, '');
+    var suffixes = Object.keys(languages).filter(function (s) { return s !== ''; });
+    for (var i = 0; i < suffixes.length; i++) {
+      var s = suffixes[i];
+      if (clean.length >= s.length && clean.slice(-s.length) === s) return s;
+    }
+    return '';
+  }
+
+  function getTargetUrl(suffix, location) {
+    var clean = location.pathname.replace(/\/$/, '') || '/';
+    var current = getCurrentSuffix(clean);
+    var base = current ? clean.slice(0, -current.length) : clean;
+    if (!base) base = '/';
+    return base + suffix + location.search + location.hash;
+  }
+
+  function render() {
+    if (document.getElementById('lang-switcher')) return;
+    var currentSuffix = getCurrentSuffix(window.location.pathname);
+    var saved = localStorage.getItem('lang');
+    if (saved !== null && languages.hasOwnProperty(saved) && saved !== currentSuffix) {
+      window.location.href = getTargetUrl(saved, window.location);
+      return;
+    }
+    var wrapper = document.createElement('div');
+    wrapper.id = 'lang-switcher';
+    var select = document.createElement('select');
+    select.setAttribute('aria-label', 'Select language');
+    Object.keys(languages).forEach(function (s) {
+      var option = document.createElement('option');
+      option.value = s;
+      option.textContent = languages[s].label;
+      if (s === currentSuffix) option.selected = true;
+      select.appendChild(option);
+    });
+    select.addEventListener('change', function () {
+      if (this.value === currentSuffix) return;
+      var langCode = languages[this.value] ? languages[this.value].code : 'en';
+      trackLanguageSwitch(langCode, this.value);
+      localStorage.setItem('lang', this.value);
+      window.location.href = getTargetUrl(this.value, window.location);
+    });
+    wrapper.appendChild(select);
+    document.body.appendChild(wrapper);
+  }
+
+  document.addEventListener('DOMContentLoaded', render);
+})();
+</script>

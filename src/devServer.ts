@@ -4,6 +4,10 @@ import { resolve } from "node:path";
 
 import chatHandler from "../api/chat.js";
 import reindexHandler from "../api/reindex.js";
+import eventHandler from "../api/event.js";
+import statsHandler from "../api/stats.js";
+import { pingDatabase } from "./analytics/log.js";
+import { isDatabaseConfigured } from "./db/pool.js";
 import { envLoadDiagnostics } from "./env.js";
 
 const port = Number(process.env.PORT || 3000);
@@ -36,11 +40,18 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
     if (req.method === "GET" && url.pathname === "/health") {
+      const dbConfigured = isDatabaseConfigured();
+      const dbOk = dbConfigured ? await pingDatabase() : false;
       return send(
         res,
         200,
         { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
-        JSON.stringify({ ok: true, ts: new Date().toISOString(), devServer: "v3" })
+        JSON.stringify({
+          ok: true,
+          ts: new Date().toISOString(),
+          devServer: "v3",
+          analytics: { database: dbConfigured, connected: dbOk },
+        })
       );
     }
 
@@ -96,6 +107,20 @@ const server = http.createServer(async (req, res) => {
         (req as any).body = raw ? JSON.parse(raw) : {};
       }
       return await (reindexHandler as any)(req, res);
+    }
+    if (url.pathname === "/api/event") {
+      if (req.method === "POST" && !("body" in (req as any))) {
+        const raw = (await readBody(req)).trim();
+        try {
+          (req as any).body = raw ? JSON.parse(raw) : {};
+        } catch {
+          return send(res, 400, { "content-type": "application/json; charset=utf-8" }, JSON.stringify({ error: "Bad JSON body" }));
+        }
+      }
+      return await (eventHandler as any)(req, res);
+    }
+    if (url.pathname === "/api/stats") {
+      return await (statsHandler as any)(req, res);
     }
 
     return notFound(res);

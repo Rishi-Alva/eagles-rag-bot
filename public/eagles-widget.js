@@ -456,6 +456,34 @@
     return "";
   }
 
+  /** POST /api/event — logs to Postgres when DATABASE_URL is set on your server. */
+  function trackAnalytics(state, eventType, metadata) {
+    const apiBase = resolvedApiBase(state.apiBase);
+    if (!apiBase) return;
+    try {
+      var pagePath = "";
+      try {
+        pagePath = window.location && window.location.pathname ? window.location.pathname : "";
+      } catch {
+        /* ignore */
+      }
+      fetch(apiBase + "/api/event", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          eventType: eventType,
+          locale: state.locale || "en",
+          clientId: state.clientId,
+          pagePath: pagePath,
+          metadata: metadata || {},
+        }),
+        keepalive: true,
+      }).catch(function () {});
+    } catch {
+      /* ignore */
+    }
+  }
+
   // --- POST /api/chat (and demo fallback) ---
   function formatErr(e) {
     if (e == null) return "Unknown error";
@@ -490,6 +518,10 @@
           message: text,
           clientId: state.clientId,
           locale: state.locale || "en",
+          pagePath:
+            typeof window !== "undefined" && window.location && window.location.pathname
+              ? window.location.pathname
+              : "",
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -717,6 +749,7 @@
       panelPeakPx: 0,
       panelExpandedForLong: false,
       panelLastOuterPx: undefined,
+      trackedChatOpen: false,
     };
 
     function applyLimitUi() {
@@ -923,6 +956,10 @@
       panel.style.display = "flex";
       input.focus();
       refreshSafeAreaInsetTop();
+      if (!state.trackedChatOpen) {
+        state.trackedChatOpen = true;
+        trackAnalytics(state, "chat_open");
+      }
       if (!body.dataset.welcomed) {
         appendMessage(body, "bot", state.copy.welcomeMsg, [], state.copy.learnMore);
         body.dataset.welcomed = "1";

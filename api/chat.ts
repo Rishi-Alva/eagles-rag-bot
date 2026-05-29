@@ -6,6 +6,7 @@ import { generateAnswer } from "../src/answer.js";
 import { loadIndex, searchIndex } from "../src/localIndex.js";
 import { readBodyAny } from "../src/api-common/readBody.js";
 import { jsonResponse } from "../src/api-common/jsonResponse.js";
+import { logEventAsync } from "../src/analytics/log.js";
 import { RateLimitError, assertWithinChatLimit, recordChatUse } from "../src/rate-limit/check.js";
 
 const BodySchema = z.object({
@@ -14,6 +15,8 @@ const BodySchema = z.object({
   clientId: z.string().max(200).optional(),
   /** Browser locale from URL (`-es`, `/es/`, etc.). Passed through by `eagles-widget.js`. */
   locale: z.string().max(12).optional(),
+  /** Current Squarespace path (for Postgres analytics). */
+  pagePath: z.string().max(500).optional(),
 });
 
 type LoadedIndex = Awaited<ReturnType<typeof loadIndex>>;
@@ -49,12 +52,21 @@ export default async function handler(req: any, res: any) {
   if (req.method === "OPTIONS") return jsonResponse(req, res, 204, {});
   if (req.method !== "POST") return jsonResponse(req, res, 405, { error: "Method not allowed" });
 
+  let clientId: string | undefined;
+  let locale: string | undefined;
+  let pagePath: string | undefined;
+
   try {
     const bodyInput = await readBodyAny(req);
     const body = BodySchema.parse(bodyInput);
     const q = body.message.trim();
     const rawId = body.clientId?.trim();
-    const clientId = rawId && rawId.length >= 8 ? rawId : undefined;
+    clientId = rawId && rawId.length >= 8 ? rawId : undefined;
+    pagePath = body.pagePath?.trim().slice(0, 500) || undefined;
+
+    const rawLoc = typeof body.locale === "string" ? body.locale.trim().toLowerCase().slice(0, 12) : "";
+    locale =
+      rawLoc && /^[a-z]{2}([-][a-z0-9]{2,8})?$/i.test(rawLoc) ? rawLoc.split("-")[0].slice(0, 5) : undefined;
 
     await assertWithinChatLimit(clientId, req);
 
@@ -73,13 +85,20 @@ export default async function handler(req: any, res: any) {
     const hits = searchIndex({ index: idx, query: q, topK: 4 });
     const sources = hits.filter((h) => h.sourceUrl && h.score > 0.2);
 
-    const rawLoc = typeof body.locale === "string" ? body.locale.trim().toLowerCase().slice(0, 12) : "";
-    const locale =
-      rawLoc && /^[a-z]{2}([-][a-z0-9]{2,8})?$/i.test(rawLoc) ? rawLoc.split("-")[0].slice(0, 5) : undefined;
-
     const { answer } = await generateAnswer({ userMessage: q, sources, locale });
 
     const rateLimit = await recordChatUse(clientId, req);
+
+    logEventAsync({
+      eventType: "chat_message",
+      locale: locale || "en",
+      clientId,
+      pagePath,
+      metadata: {
+        message_length: q.length,
+        sources_count: sources.length,
+      },
+    });
 
     return jsonResponse(req, res, 200, {
       answer,
@@ -89,6 +108,13 @@ export default async function handler(req: any, res: any) {
     });
   } catch (err: unknown) {
     if (err instanceof RateLimitError) {
+      logEventAsync({
+        eventType: "chat_rate_limited",
+        locale: locale || "en",
+        clientId,
+        pagePath,
+        metadata: { contact: err.contactEmail },
+      });
       return jsonResponse(req, res, 429, {
         error: err.message,
         code: err.code,
@@ -100,6 +126,10 @@ export default async function handler(req: any, res: any) {
       return jsonResponse(req, res, 400, { error: msg });
     }
     const msg = formatServerError(err);
+    logEventAsync({
+      eventType: "chat_error",
+      metadata: { error: msg.slice(0, 500) },
+    });
     return jsonResponse(req, res, 500, { error: msg });
   }
 }
