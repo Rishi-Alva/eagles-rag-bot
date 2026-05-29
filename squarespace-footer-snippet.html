@@ -1,21 +1,32 @@
 <!--
-  Orlando Eagles chat widget — PRODUCTION EMBED
-  Paste into Squarespace: Settings → Advanced → Code Injection → Footer
+  Orlando Eagles — Squarespace FOOTER (Code Injection)
+  Settings → Advanced → Code Injection → Footer
 
-  Replace YOUR-DEPLOYMENT-DOMAIN with your real host (e.g. api.yoursite.com or your-app.vercel.app).
-  Deploy this repo so these URLs exist on that host:
-    /eagles-widget.js
-    /orlando-eagles-logo.png
-    /api/chat
+  Includes:
+  - Vercel Web Analytics (page views on orlandoeaglessoccer.com — Hobby plan)
+  - Eagles chat widget
+
+  Requires Vercel project: eagles-rag-bot (Analytics enabled + redeployed)
 -->
 
+<!-- Vercel Web Analytics (sends page views to your Vercel project) -->
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
 <script
-  src="https://YOUR-DEPLOYMENT-DOMAIN/eagles-widget.js"
-  data-api-base="https://YOUR-DEPLOYMENT-DOMAIN"
+  defer
+  src="https://eagles-rag-bot.vercel.app/_vercel/insights/script.js"
+  data-endpoint="https://eagles-rag-bot.vercel.app/_vercel/insights"
+></script>
+
+<!-- Eagles Assistant chat widget -->
+<script
+  src="https://eagles-rag-bot.vercel.app/eagles-widget.js"
+  data-api-base="https://eagles-rag-bot.vercel.app"
   data-title="Eagles Assistant"
   data-position="right"
-  data-demo="auto"
-  data-logo="https://YOUR-DEPLOYMENT-DOMAIN/orlando-eagles-logo.png"
+  data-demo="off"
+  data-logo="https://eagles-rag-bot.vercel.app/orlando-eagles-logo.png"
   data-free-uses="5"
   data-contact-email="info@orlandoeaglessoccer.com"
   defer
